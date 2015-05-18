@@ -32,7 +32,13 @@ def print_bulk_edit(arr)
   puts "https://redmine.renuo.ch/issues/bulk_edit?#{ arr.map{|v| v[:issue].id}.sort.map{|v| "ids%5B%5D=#{v}"}.join('&') }"
 end
 
-issues_this_week = TimeEntry.where(spent_on: @start_date..@end_date).includes(:issue).map(&:issue).uniq.reject{|i| ignore_issues.include?(i.id)}
+entries_without_issues = TimeEntry.where(spent_on: @start_date..@end_date).to_a.select{|t| !t.issue}
+unless entries_without_issues.empty?
+  p entries_without_issues
+  fail 'time entries without issues found!'
+end
+
+issues_this_week = TimeEntry.where(spent_on: @start_date..@end_date).includes(:issue).map(&:issue).uniq.reject{|i| i.nil? || ignore_issues.include?(i.id)}
 ongoing = IssueCustomField.find(8)
 sprint = IssueCustomField.find(7)
 backlog_priority = IssueCustomField.find(5)
@@ -56,9 +62,9 @@ wrong_support_issues = all_support_issues - support_issues
 
 print_issue_list('Ongoing Issues', ongoing_issues)
 print_issue_list('Support', support_issues)
-print_issue_list('Support Issues in the Wrong Sprint (this should always be empty)!?', wrong_support_issues)
+print_issue_list('Support Issues in the Wrong Sprint (this should be empty)', wrong_support_issues)
 print_issue_list('Action', action_issues, true)
 print_issue_list('Action Issues in the Wrong Sprint (this should always be empty)!?', wrong_action_issues)
 print_issue_list('Planned Issues', planned_issues, true)
-print_issue_list('Issues Without a Sprint (this should always be empty)!?', planned_issues_without_sprint)
-print_issue_list('Issues in the Wrong Sprint (this should always be empty)!?', wrong_sprint_issues)
+print_issue_list('Issues Without a Sprint (this should be empty unless it\'s only an estimation)', planned_issues_without_sprint)
+print_issue_list('Issues in the Wrong Sprint (this should be empty unless it\'s only an estimation)', wrong_sprint_issues)
