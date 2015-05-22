@@ -3,6 +3,8 @@ now = DateTime.now
 @end_date = @start_date + 7.days
 
 ignore_issues = [3646]
+user_ids = [1, 2, 25, 26, 30, 31]
+
 
 def hours_by_issue(issue, sum_all = false)
   e = issue.time_entries
@@ -38,7 +40,7 @@ unless entries_without_issues.empty?
   fail 'time entries without issues found!'
 end
 
-issues_this_week = TimeEntry.where(spent_on: @start_date..@end_date).includes(:issue).map(&:issue).uniq.reject{|i| i.nil? || ignore_issues.include?(i.id)}
+issues_this_week = TimeEntry.where(spent_on: @start_date..@end_date, user_id: user_ids).includes(:issue).map(&:issue).uniq.reject{|i| i.nil? || ignore_issues.include?(i.id)}
 ongoing = IssueCustomField.find(8)
 sprint = IssueCustomField.find(7)
 backlog_priority = IssueCustomField.find(5)
