@@ -4,14 +4,16 @@ def main
   rows = []
   rows << ['Weeks Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]']
   rows << :separator
+
+  [24, 18, 12, 9, 6, 3, 2, 1].each do |months|
+    rows << calculate_velocity(months * 4, months * 4)
+  end
+
   weeks = 10
   weeks.downto(0) do |weeks_ago|
     rows << calculate_velocity(weeks_ago)
   end
 
-  [1, 2, 3, 6, 9, 12, 18, 24].each do |months|
-    rows << calculate_velocity(months * 4, months * 4)
-  end
   table = Terminal::Table.new rows: rows, title: 'Renuo Velocity'
   rows.each_index { |index| table.align_column(index, :right) }
 
@@ -25,7 +27,7 @@ end
 def calculate_velocity(weeks_ago, total_weeks = 1)
   weekly_planning_estimated_hours, weekly_planning_spent_hours, estimated_feature_hours, spent_hours = calculate_estimated_and_spent(weeks_ago, total_weeks)
 
-  weeks_ago_display = total_weeks == 1 ? weeks_ago : "Last #{total_weeks / 4} months"
+  weeks_ago_display = total_weeks == 1 ? "Sprint #{weeks_ago} weeks ago" : "Last #{total_weeks / 4} months"
   weekly_planning_velocity = weekly_planning_spent_hours.zero? ? 0 : weekly_planning_estimated_hours / weekly_planning_spent_hours
   total_project_velocity = spent_hours.zero? ? 0 : estimated_feature_hours / spent_hours
 
