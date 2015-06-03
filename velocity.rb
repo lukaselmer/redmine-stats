@@ -24,7 +24,7 @@ def projects(user_ids)
     end
 
     project_table = Terminal::Table.new rows: project_rows, title: "Project '#{project.name}' Velocity (Developers Only)"
-    project_rows.each_index { |index| table.align_column(index, :right) }
+    project_rows.each_index { |index| project_table.align_column(index, :right) }
     puts project_table
   end
 end
@@ -59,7 +59,7 @@ def find_relevant_projects(user_ids, max_projects)
   end
   project_time = issues_this_week.map { |i| { issue: i } }.group_by { |i| i[:issue].project }.map { |project, issues| [project, spent_hours(issues, user_ids)] }
   ordered_project_time = project_time.sort_by { |x| -x[1] }
-  puts "Project time: #{ ordered_project_time.map { |x| [x[0].name, x[1]].join(': ') }.join(', ')}"
+  puts "Project time: #{ ordered_project_time.map { |x| [x[0].name, x[1].to_f.round(1)].join(': ') }.join(', ')}"
   ordered_project_time.select { |x| x[1].to_f > 30 }.map { |x| x[0] }.first(max_projects)
 end
 
