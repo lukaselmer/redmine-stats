@@ -13,7 +13,7 @@ def main
     rows << calculate_velocity(user_ids, weeks_ago, 1)
   end
 
-  [24, 18, 12, 9, 6, 3, 2, 1].each do |months|
+  [18, 12, 9, 6, 3, 2, 1].each do |months|
     rows << calculate_velocity(user_ids, months * 4, months * 4)
   end
 
@@ -33,7 +33,7 @@ def main
       project_rows << calculate_velocity(user_ids, weeks_ago, 1, project.id)
     end
 
-    [48, 24, 12, 6, 3, 2, 1].each do |months|
+    [48, 12, 6, 3, 2, 1].each do |months|
       project_rows << calculate_velocity(user_ids, months * 4, months * 4, project.id)
     end
 
