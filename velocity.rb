@@ -4,7 +4,7 @@ def main
   rows = []
   rows << ['Weeks Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]']
   rows << :separator
-  weeks = 1
+  weeks = 10
   weeks.downto(0) do |weeks_ago|
     rows << calculate_velocity(weeks_ago)
   end
