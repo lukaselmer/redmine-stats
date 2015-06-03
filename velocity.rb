@@ -4,10 +4,14 @@ def main
   user_ids = [1, 2, 25, 26, 30, 31]
   overview(user_ids)
   projects(user_ids)
+  user_ids.each do |user_id|
+    overview([user_id], User.find(user_id))
+    projects([user_id], User.find(user_id))
+  end
 end
 
-def projects(user_ids)
-  max_projects = 10
+def projects(user_ids, developer = nil)
+  max_projects = 25
   relevant_projects = find_relevant_projects(user_ids, max_projects)
   relevant_projects.each do |project|
     project_rows = []
@@ -23,13 +27,14 @@ def projects(user_ids)
       project_rows << calculate_velocity(user_ids, months * 4, months * 4, project.id)
     end
 
-    project_table = Terminal::Table.new rows: project_rows, title: "Project '#{project.name}' Velocity (Developers Only)"
+    name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
+    project_table = Terminal::Table.new rows: project_rows, title: "Project '#{project.name}' Velocity (#{name})"
     project_rows.each_index { |index| project_table.align_column(index, :right) }
     puts project_table
   end
 end
 
-def overview(user_ids)
+def overview(user_ids, developer = nil)
   rows = []
   rows << ['Weeks Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]', 'Renuo Velocity', 'Total Spent Incl. Ongoing [d]']
   rows << :separator
@@ -43,7 +48,8 @@ def overview(user_ids)
     rows << calculate_velocity(user_ids, months * 4, months * 4)
   end
 
-  table = Terminal::Table.new rows: rows, title: 'Renuo Velocity (Developers Only)'
+  name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
+  table = Terminal::Table.new rows: rows, title: "Renuo Velocity (#{name})"
   rows.each_index { |index| table.align_column(index, :right) }
   puts table
 end
