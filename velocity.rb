@@ -1,26 +1,12 @@
 require 'terminal-table'
 
 def main
-  rows = []
-  rows << ['Weeks Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]', 'Renuo Velocity', 'Total Spent Incl. Ongoing [d]']
-  rows << :separator
-
   user_ids = [1, 2, 25, 26, 30, 31]
+  overview(user_ids)
+  projects(user_ids)
+end
 
-  #weeks = 8
-  weeks = 6
-  weeks.downto(0) do |weeks_ago|
-    rows << calculate_velocity(user_ids, weeks_ago, 1)
-  end
-
-  [18, 12, 9, 6, 3, 2, 1].each do |months|
-    rows << calculate_velocity(user_ids, months * 4, months * 4)
-  end
-
-  table = Terminal::Table.new rows: rows, title: 'Renuo Velocity (Developers Only)'
-  rows.each_index { |index| table.align_column(index, :right) }
-  puts table
-
+def projects(user_ids)
   max_projects = 10
   relevant_projects = find_relevant_projects(user_ids, max_projects)
   relevant_projects.each do |project|
@@ -43,8 +29,27 @@ def main
   end
 end
 
+def overview(user_ids)
+  rows = []
+  rows << ['Weeks Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]', 'Renuo Velocity', 'Total Spent Incl. Ongoing [d]']
+  rows << :separator
+
+  weeks = 6
+  weeks.downto(0) do |weeks_ago|
+    rows << calculate_velocity(user_ids, weeks_ago, 1)
+  end
+
+  [18, 12, 9, 6, 3, 2, 1].each do |months|
+    rows << calculate_velocity(user_ids, months * 4, months * 4)
+  end
+
+  table = Terminal::Table.new rows: rows, title: 'Renuo Velocity (Developers Only)'
+  rows.each_index { |index| table.align_column(index, :right) }
+  puts table
+end
+
 def find_relevant_projects(user_ids, max_projects)
-  relevant_months = 1
+  relevant_months = 6
   now = DateTime.now
   start_date = now - now.wday.days - (relevant_months * 4).weeks
   end_date = start_date + (relevant_months * 4).weeks
@@ -54,7 +59,8 @@ def find_relevant_projects(user_ids, max_projects)
   end
   project_time = issues_this_week.map { |i| { issue: i } }.group_by { |i| i[:issue].project }.map { |project, issues| [project, spent_hours(issues, user_ids)] }
   ordered_project_time = project_time.sort_by { |x| -x[1] }
-  ordered_project_time.select{|x| x[1].to_f > 30}.map { |x| x[0] }.first(max_projects)
+  puts "Project time: #{ ordered_project_time.map { |x| [x[0].name, x[1]].join(': ') }.join(', ')}"
+  ordered_project_time.select { |x| x[1].to_f > 30 }.map { |x| x[0] }.first(max_projects)
 end
 
 def format_days(hours)
