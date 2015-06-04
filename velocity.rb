@@ -8,13 +8,13 @@ class RedmineVelocity
     raise 'Please supply a valid CSV_PATH as env variable' if @csv_path.blank?
   end
 
-  def print_table(title, rows)
-    table = Terminal::Table.new rows: rows, title: title
+  def print_table(project, name, rows)
+    table = Terminal::Table.new rows: rows, title: "#{project} (#{name})"
     rows.each_index { |index| table.align_column(index, :right) }
     puts table
 
     rows.each do |row|
-      @all_table_data << ([title] + row) if row.is_a? Array
+      @all_table_data << ([project, name] + row) if row.is_a? Array
     end
   end
 
@@ -22,7 +22,8 @@ class RedmineVelocity
     CSV.open(@csv_path, 'wb') do |csv|
       first = true
       @all_table_data.each do |row|
-        csv << row if first || row[1].is_a?(Numeric)
+        p row
+        csv << row if first || row.last.is_a?(Numeric)
         first = false
       end
     end
@@ -55,8 +56,8 @@ class RedmineVelocity
         project_rows << calculate_velocity(user_ids, months * 4, months * 4, project.id, developer)
       end
 
-      name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
-      print_table("Project '#{project.name}' Velocity (#{name})", project_rows)
+      name = developer ? "#{developer.firstname} #{developer.lastname}" : 'All Developers'
+      print_table("Project '#{project.name}' Velocity", name, project_rows)
     end
   end
 
@@ -74,8 +75,8 @@ class RedmineVelocity
       rows << calculate_velocity(user_ids, months * 4, months * 4, nil, developer)
     end
 
-    name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
-    print_table("Renuo Velocity (#{name})", rows)
+    name = developer ? "#{developer.firstname} #{developer.lastname}" : 'All Developers'
+    print_table('Renuo Velocity', name, rows)
   end
 
   def find_relevant_projects(user_ids, max_projects)
