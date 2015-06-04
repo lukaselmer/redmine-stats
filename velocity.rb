@@ -3,6 +3,27 @@ require 'terminal-table'
 class RedmineVelocity
   def initialize
     @developer_ids = [1, 2, 25, 26, 30, 31, 9]
+    @all_table_data = []
+    @csv_path = ENV['CSV_PATH']
+    raise 'Please supply a valid CSV_PATH as env variable' if @csv_path.blank?
+  end
+
+  def print_table(title, rows)
+    table = Terminal::Table.new rows: rows, title: title
+    rows.each_index { |index| table.align_column(index, :right) }
+    puts table
+
+    @all_table_data << ([title] + rows)
+  end
+
+  def generate_csv
+    CSV.open(@csv_path, 'wb') do |csv|
+      first = true
+      @all_table_data.each do |row|
+        csv << row if first || row[1].is_a?(Numeric)
+        first = false
+      end
+    end
   end
 
   def main
@@ -13,6 +34,7 @@ class RedmineVelocity
       overview([user_id], User.find(user_id))
       projects([user_id], 20, User.find(user_id))
     end
+    generate_csv
   end
 
   def projects(user_ids, max_projects, developer = nil)
@@ -32,9 +54,7 @@ class RedmineVelocity
       end
 
       name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
-      project_table = Terminal::Table.new rows: project_rows, title: "Project '#{project.name}' Velocity (#{name})"
-      project_rows.each_index { |index| project_table.align_column(index, :right) }
-      puts project_table
+      print_table("Project '#{project.name}' Velocity (#{name})", project_rows)
     end
   end
 
@@ -53,9 +73,7 @@ class RedmineVelocity
     end
 
     name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
-    table = Terminal::Table.new rows: rows, title: "Renuo Velocity (#{name})"
-    rows.each_index { |index| table.align_column(index, :right) }
-    puts table
+    print_table("Renuo Velocity (#{name})", rows)
   end
 
   def find_relevant_projects(user_ids, max_projects)
