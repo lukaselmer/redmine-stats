@@ -2,9 +2,21 @@ require 'terminal-table'
 
 class RedmineVelocity
   def initialize
-    @developer_ids = [1, 2, 25, 26, 30, 31, 9]
+    debug = false
+    if debug
+      @developer_ids = [1]
+      @months = [1]
+      @weeks = 1
+      @csv_path = 'tmp/tmp-velocity-data.csv'
+    else
+      @developer_ids = [1, 2, 25, 26, 30, 31, 9]
+      @months = [48, 12, 9, 6, 5, 4, 3, 2, 1]
+      @weeks = 6
+      @csv_path = ENV['CSV_PATH']
+    end
     @all_table_data = []
-    @csv_path = ENV['CSV_PATH']
+    @header = ['Type Ago', 'Time Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]', 'Renuo Velocity', 'Total Spent Incl. Ongoing [d]']
+    @csv_header = %w(Project Developers) + @header
     raise 'Please supply a valid CSV_PATH as env variable' if @csv_path.blank?
   end
 
@@ -22,7 +34,8 @@ class RedmineVelocity
     CSV.open(@csv_path, 'wb') do |csv|
       first = true
       @all_table_data.each do |row|
-        csv << row if first || row.last.is_a?(Numeric)
+        csv << @csv_header if first
+        csv << row if row.last.is_a?(Numeric)
         first = false
       end
     end
@@ -43,15 +56,14 @@ class RedmineVelocity
     relevant_projects = find_relevant_projects(user_ids, max_projects)
     relevant_projects.each do |project|
       project_rows = []
-      project_rows << ['Weeks Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]', 'Renuo Velocity', 'Total Spent Incl. Ongoing [d]']
+      project_rows << @header
       project_rows << :separator
 
-      weeks = 6
-      weeks.downto(0) do |weeks_ago|
+      @weeks.downto(0) do |weeks_ago|
         project_rows << calculate_velocity(user_ids, weeks_ago, 1, project.id, developer)
       end
 
-      [48, 12, 6, 3, 2, 1].each do |months|
+      @months.each do |months|
         project_rows << calculate_velocity(user_ids, months * 4, months * 4, project.id, developer)
       end
 
@@ -62,15 +74,14 @@ class RedmineVelocity
 
   def overview(user_ids, developer = nil)
     rows = []
-    rows << ['Weeks Ago', 'Estimation Velocity', 'Estimated [d]', 'Spent [d]', 'Project Velocity', 'Estimated Features [d]', 'Total Spent [d]', 'Renuo Velocity', 'Total Spent Incl. Ongoing [d]']
+    rows << @header
     rows << :separator
 
-    weeks = 6
-    weeks.downto(0) do |weeks_ago|
+    @weeks.downto(0) do |weeks_ago|
       rows << calculate_velocity(user_ids, weeks_ago, 1, nil, developer)
     end
 
-    [18, 12, 9, 6, 3, 2, 1].each do |months|
+    @months.each do |months|
       rows << calculate_velocity(user_ids, months * 4, months * 4, nil, developer)
     end
 
@@ -101,13 +112,13 @@ class RedmineVelocity
     weekly_planning_estimated_hours, weekly_planning_spent_hours, estimated_feature_hours, spent_hours, spent_hours_including_ongoing =
       calculate_estimated_and_spent(user_ids, weeks_ago, total_weeks, project_id, developer)
 
-    weeks_ago_display = total_weeks == 1 ? "Sprint #{weeks_ago} weeks ago" : "Last #{total_weeks / 4} months"
+    weeks_ago_display = total_weeks == 1 ? ['Weeks ago', weeks_ago] : ["Last months", total_weeks / 4]
     weekly_planning_velocity = weekly_planning_spent_hours.zero? ? 0 : weekly_planning_estimated_hours / weekly_planning_spent_hours
     total_project_velocity = spent_hours.zero? ? 0 : estimated_feature_hours / spent_hours
     total_renuo_velocity = spent_hours_including_ongoing.zero? ? 0 : estimated_feature_hours / spent_hours_including_ongoing
 
 
-    return weeks_ago_display,
+    return weeks_ago_display[0], weeks_ago_display[1],
       weekly_planning_velocity.round(3), format_days(weekly_planning_estimated_hours), format_days(weekly_planning_spent_hours),
       total_project_velocity.round(3), format_days(estimated_feature_hours), format_days(spent_hours),
       total_renuo_velocity.round(3), format_days(spent_hours_including_ongoing)
