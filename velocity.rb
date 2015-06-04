@@ -14,7 +14,7 @@ class RedmineVelocity
     puts table
 
     rows.each do |row|
-      @all_table_data << ([title] + row)
+      @all_table_data << ([title] + row) if row.is_a? Array
     end
   end
 
