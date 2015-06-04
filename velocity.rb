@@ -13,7 +13,9 @@ class RedmineVelocity
     rows.each_index { |index| table.align_column(index, :right) }
     puts table
 
-    @all_table_data << ([title] + rows)
+    rows.each do |row|
+      @all_table_data << ([title] + row)
+    end
   end
 
   def generate_csv
