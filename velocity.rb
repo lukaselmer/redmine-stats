@@ -22,7 +22,6 @@ class RedmineVelocity
     CSV.open(@csv_path, 'wb') do |csv|
       first = true
       @all_table_data.each do |row|
-        p row
         csv << row if first || row.last.is_a?(Numeric)
         first = false
       end
