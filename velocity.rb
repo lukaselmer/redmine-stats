@@ -20,11 +20,11 @@ def projects(user_ids, developer = nil)
 
     weeks = 6
     weeks.downto(0) do |weeks_ago|
-      project_rows << calculate_velocity(user_ids, weeks_ago, 1, project.id)
+      project_rows << calculate_velocity(user_ids, weeks_ago, 1, project.id, developer)
     end
 
     [48, 12, 6, 3, 2, 1].each do |months|
-      project_rows << calculate_velocity(user_ids, months * 4, months * 4, project.id)
+      project_rows << calculate_velocity(user_ids, months * 4, months * 4, project.id, developer)
     end
 
     name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
@@ -41,11 +41,11 @@ def overview(user_ids, developer = nil)
 
   weeks = 6
   weeks.downto(0) do |weeks_ago|
-    rows << calculate_velocity(user_ids, weeks_ago, 1)
+    rows << calculate_velocity(user_ids, weeks_ago, 1, nil, developer)
   end
 
   [18, 12, 9, 6, 3, 2, 1].each do |months|
-    rows << calculate_velocity(user_ids, months * 4, months * 4)
+    rows << calculate_velocity(user_ids, months * 4, months * 4, nil, developer)
   end
 
   name = developer ? "#{developer.firstname} #{developer.lastname}" : 'Developers Only'
@@ -73,8 +73,9 @@ def format_days(hours)
   (hours / 8.5).round(1)
 end
 
-def calculate_velocity(user_ids, weeks_ago, total_weeks, project_id = nil)
-  weekly_planning_estimated_hours, weekly_planning_spent_hours, estimated_feature_hours, spent_hours, spent_hours_including_ongoing = calculate_estimated_and_spent(user_ids, weeks_ago, total_weeks, project_id)
+def calculate_velocity(user_ids, weeks_ago, total_weeks, project_id, developer)
+  weekly_planning_estimated_hours, weekly_planning_spent_hours, estimated_feature_hours, spent_hours, spent_hours_including_ongoing =
+    calculate_estimated_and_spent(user_ids, weeks_ago, total_weeks, project_id, developer)
 
   weeks_ago_display = total_weeks == 1 ? "Sprint #{weeks_ago} weeks ago" : "Last #{total_weeks / 4} months"
   weekly_planning_velocity = weekly_planning_spent_hours.zero? ? 0 : weekly_planning_estimated_hours / weekly_planning_spent_hours
@@ -88,7 +89,7 @@ def calculate_velocity(user_ids, weeks_ago, total_weeks, project_id = nil)
     total_renuo_velocity.round(3), format_days(spent_hours_including_ongoing)
 end
 
-def calculate_estimated_and_spent(user_ids, weeks_ago, total_weeks, project_id)
+def calculate_estimated_and_spent(user_ids, weeks_ago, total_weeks, project_id, developer)
   now = DateTime.now
   start_date = now - now.wday.days - weeks_ago.weeks
   end_date = start_date + total_weeks.weeks
@@ -102,6 +103,7 @@ def calculate_estimated_and_spent(user_ids, weeks_ago, total_weeks, project_id)
   sprint = IssueCustomField.find(7)
   issues_this_week_enhanced = issues_this_week.map { |v|
     {
+      main_developer_id: main_issue_developer(v),
       ongoing: v.custom_field_value(ongoing) == '1',
       sprint: v.custom_field_value(sprint).try(:to_date),
       issue: v,
@@ -109,20 +111,30 @@ def calculate_estimated_and_spent(user_ids, weeks_ago, total_weeks, project_id)
       estimated_and_spent: !v.estimated_hours.to_f.zero? && !v.spent_hours.to_f.zero?
     }
   }
+  issues_this_week_enhanced = issues_this_week_enhanced.select { |v| v[:main_developer_id] == developer.id } if developer
+
   normal_issues = issues_this_week_enhanced.select { |v| !v[:ongoing] }
 
   weekly_planning_estimated_hours = normal_issues.select { |v| v[:estimated_and_spent] }.map { |i| i[:issue] }.map(&:estimated_hours).reduce(:+).to_f
-  weekly_planning_spent_hours = spent_hours(normal_issues.select { |v| v[:estimated_and_spent] }, user_ids)
+  weekly_planning_spent_hours = spent_hours(normal_issues.select { |v| v[:estimated_and_spent] })
 
   estimated_feature_hours = normal_issues.select { |v| v[:estimated_and_spent] }.select { |v| v[:tracker_name] == 'Feature' }.map { |i| i[:issue] }.map(&:estimated_hours).reduce(:+).to_f
-  spent_hours = spent_hours(normal_issues, user_ids)
-  spent_hours_including_ongoing = spent_hours(issues_this_week_enhanced, user_ids)
+  spent_hours = spent_hours(normal_issues)
+  spent_hours_including_ongoing = spent_hours(issues_this_week_enhanced)
 
   return weekly_planning_estimated_hours, weekly_planning_spent_hours, estimated_feature_hours, spent_hours, spent_hours_including_ongoing
 end
 
-def spent_hours(enhanced_issues, user_ids)
-  enhanced_issues.map { |i| i[:issue] }.map { |i| i.time_entries.where(user_id: user_ids).map(&:hours).reduce(:+).to_f }.reduce(:+).to_f
+def main_issue_developer(issue)
+  issue.time_entries.to_a.group_by(&:user_id).map { |k, v| [k, v.sum(&:hours)] }.max_by { |x| x[1] }[0]
+end
+
+def spent_hours(enhanced_issues, user_ids = nil)
+  enhanced_issues.map { |i| i[:issue] }.map do |i|
+    te = i.time_entries
+    te = te.where(user_id: user_ids) if user_ids
+    te.map(&:hours).reduce(:+).to_f
+  end.reduce(:+).to_f
 end
 
 main()
