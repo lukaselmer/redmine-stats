@@ -3,15 +3,14 @@ require 'terminal-table'
 def main
   user_ids = [1, 2, 25, 26, 30, 31]
   overview(user_ids)
-  projects(user_ids)
+  projects(user_ids, 25)
   user_ids.each do |user_id|
     overview([user_id], User.find(user_id))
-    projects([user_id], User.find(user_id))
+    projects([user_id], 20, User.find(user_id))
   end
 end
 
-def projects(user_ids, developer = nil)
-  max_projects = 25
+def projects(user_ids, max_projects, developer = nil)
   relevant_projects = find_relevant_projects(user_ids, max_projects)
   relevant_projects.each do |project|
     project_rows = []
@@ -66,7 +65,7 @@ def find_relevant_projects(user_ids, max_projects)
   project_time = issues_this_week.map { |i| { issue: i } }.group_by { |i| i[:issue].project }.map { |project, issues| [project, spent_hours(issues, user_ids)] }
   ordered_project_time = project_time.sort_by { |x| -x[1] }
   puts "Project time: #{ ordered_project_time.map { |x| [x[0].name, x[1].to_f.round(1)].join(': ') }.join(', ')}"
-  ordered_project_time.select { |x| x[1].to_f > 30 }.map { |x| x[0] }.first(max_projects)
+  ordered_project_time.select { |x| x[1].to_f > 40 }.map { |x| x[0] }.first(max_projects)
 end
 
 def format_days(hours)
